@@ -161,6 +161,10 @@
 #define I_SS_LPO_3 48
 
 
+//HD108
+#define I_HS_HD108_3 110 //hardware SPI
+#define I_SS_HD108_3 111 //soft SPI
+
 // In the following NeoGammaNullMethod can be replaced with NeoGammaWLEDMethod to perform Gamma correction implicitly
 // unfortunately that may apply Gamma correction to pre-calculated palettes which is undesired
 
@@ -300,6 +304,15 @@
 #define B_HS_DOT_3 NeoPixelBusLg<DotStarBgrFeature, DotStarSpiHzMethod, NeoGammaNullMethod> //hardware VSPI
 #endif
 #define B_SS_DOT_3 NeoPixelBusLg<DotStarBgrFeature, DotStarMethod, NeoGammaNullMethod>    //soft SPI
+
+//HD108
+#ifdef WLED_USE_ETHERNET
+// fix for #2542 (by @BlackBird77)
+#define B_HS_HD108_3 NeoPixelBusLg<Hd108BgrFeature, DotStarEsp32HspiHzMethod, NeoGammaNullMethod> //hardware HSPI (was DotStarEsp32DmaHspi5MhzMethod in NPB @ 2.6.9)
+#else
+#define B_HS_HD108_3 NeoPixelBusLg<Hd108BgrFeature, Hd108SpiMethod, NeoGammaNullMethod> //hardware VSPI
+#endif
+#define B_SS_HD108_3 NeoPixelBusLg<Hd108BgrFeature, Hd108Method, NeoGammaNullMethod>    //soft SPI
 
 //LPD8806
 #define B_HS_LPD_3 NeoPixelBusLg<Lpd8806GrbFeature, Lpd8806SpiHzMethod, NeoGammaNullMethod>
@@ -466,12 +479,14 @@ class PolyBus {
       case I_32_I0_SM16825_5: (static_cast<B_32_I0_SM16825_5*>(busPtr))->Begin(); break;
       #endif
       // ESP32 can (and should, to avoid inadvertantly driving the chip select signal) specify the pins used for SPI, but only in begin()
+      case I_HS_HD108_3: beginDotStar<B_HS_DOT_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
       case I_HS_DOT_3: beginDotStar<B_HS_DOT_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
       case I_HS_LPD_3: beginDotStar<B_HS_LPD_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
       case I_HS_LPO_3: beginDotStar<B_HS_LPO_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
       case I_HS_WS1_3: beginDotStar<B_HS_WS1_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
       case I_HS_P98_3: beginDotStar<B_HS_P98_3*>(busPtr, pins[1], -1, pins[0], -1, clock_kHz); break;
     #endif
+      case I_SS_HD108_3: (static_cast<B_SS_DOT_3*>(busPtr))->Begin(); break;
       case I_SS_DOT_3: (static_cast<B_SS_DOT_3*>(busPtr))->Begin(); break;
       case I_SS_LPD_3: (static_cast<B_SS_LPD_3*>(busPtr))->Begin(); break;
       case I_SS_LPO_3: (static_cast<B_SS_LPO_3*>(busPtr))->Begin(); break;
@@ -586,6 +601,8 @@ class PolyBus {
       #endif
     #endif
       // for 2-wire: pins[1] is clk, pins[0] is dat.  begin expects (len, clk, dat)
+      case I_HS_HD108_3: busPtr = new B_HS_HD108_3(len, pins[1], pins[0]); break;
+      case I_SS_HD108_3: busPtr = new B_SS_HD108_3(len, pins[1], pins[0]); break;
       case I_HS_DOT_3: busPtr = new B_HS_DOT_3(len, pins[1], pins[0]); break;
       case I_SS_DOT_3: busPtr = new B_SS_DOT_3(len, pins[1], pins[0]); break;
       case I_HS_LPD_3: busPtr = new B_HS_LPD_3(len, pins[1], pins[0]); break;
@@ -699,6 +716,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: (static_cast<B_32_I0_SM16825_5*>(busPtr))->Show(consistent); break;
       #endif
     #endif
+      case I_HS_HD108_3: (static_cast<B_HS_HD108_3*>(busPtr))->Show(consistent); break;
+      case I_SS_HD108_3: (static_cast<B_SS_HD108_3*>(busPtr))->Show(consistent); break;
       case I_HS_DOT_3: (static_cast<B_HS_DOT_3*>(busPtr))->Show(consistent); break;
       case I_SS_DOT_3: (static_cast<B_SS_DOT_3*>(busPtr))->Show(consistent); break;
       case I_HS_LPD_3: (static_cast<B_HS_LPD_3*>(busPtr))->Show(consistent); break;
@@ -809,6 +828,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: return (static_cast<B_32_I0_SM16825_5*>(busPtr))->CanShow(); break;
       #endif
     #endif
+      case I_HS_HD108_3: return (static_cast<B_HS_HD108_3*>(busPtr))->CanShow(); break;
+      case I_SS_HD108_3: return (static_cast<B_SS_HD108_3*>(busPtr))->CanShow(); break;
       case I_HS_DOT_3: return (static_cast<B_HS_DOT_3*>(busPtr))->CanShow(); break;
       case I_SS_DOT_3: return (static_cast<B_SS_DOT_3*>(busPtr))->CanShow(); break;
       case I_HS_LPD_3: return (static_cast<B_HS_LPD_3*>(busPtr))->CanShow(); break;
@@ -946,6 +967,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: (static_cast<B_32_I0_SM16825_5*>(busPtr))->SetPixelColor(pix, Rgbww80Color(col.R*257, col.G*257, col.B*257, cctWW*257, cctCW*257)); break;
       #endif
     #endif
+      case I_HS_HD108_3: (static_cast<B_HS_HD108_3*>(busPtr))->SetPixelColor(pix, RgbColor(col)); break;
+      case I_SS_HD108_3: (static_cast<B_SS_HD108_3*>(busPtr))->SetPixelColor(pix, RgbColor(col)); break;
       case I_HS_DOT_3: (static_cast<B_HS_DOT_3*>(busPtr))->SetPixelColor(pix, RgbColor(col)); break;
       case I_SS_DOT_3: (static_cast<B_SS_DOT_3*>(busPtr))->SetPixelColor(pix, RgbColor(col)); break;
       case I_HS_LPD_3: (static_cast<B_HS_LPD_3*>(busPtr))->SetPixelColor(pix, RgbColor(col)); break;
@@ -1057,6 +1080,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: (static_cast<B_32_I0_SM16825_5*>(busPtr))->SetLuminance(b); break;
       #endif
     #endif
+      case I_HS_HD108_3: (static_cast<B_HS_HD108_3*>(busPtr))->SetLuminance(b); break;
+      case I_SS_HD108_3: (static_cast<B_SS_HD108_3*>(busPtr))->SetLuminance(b); break;
       case I_HS_DOT_3: (static_cast<B_HS_DOT_3*>(busPtr))->SetLuminance(b); break;
       case I_SS_DOT_3: (static_cast<B_SS_DOT_3*>(busPtr))->SetLuminance(b); break;
       case I_HS_LPD_3: (static_cast<B_HS_LPD_3*>(busPtr))->SetLuminance(b); break;
@@ -1169,6 +1194,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: { Rgbww80Color c = (static_cast<B_32_I0_SM16825_5*>(busPtr))->GetPixelColor(pix); col = RGBW32(c.R/257,c.G/257,c.B/257,max(c.WW,c.CW)/257); } break; // will not return original W
       #endif
     #endif
+      case I_HS_HD108_3: {Rgbw64Color c = (static_cast<B_HS_HD108_3*>(busPtr))->GetPixelColor(pix); col = RGBW32(c.R/257,c.G/257,c.B/257,c.W/257);} break;
+      case I_SS_HD108_3: {Rgbw64Color c = (static_cast<B_SS_HD108_3*>(busPtr))->GetPixelColor(pix); col = RGBW32(c.R/257,c.G/257,c.B/257,c.W/257);} break;
       case I_HS_DOT_3: col = (static_cast<B_HS_DOT_3*>(busPtr))->GetPixelColor(pix); break;
       case I_SS_DOT_3: col = (static_cast<B_SS_DOT_3*>(busPtr))->GetPixelColor(pix); break;
       case I_HS_LPD_3: col = (static_cast<B_HS_LPD_3*>(busPtr))->GetPixelColor(pix); break;
@@ -1299,6 +1326,8 @@ class PolyBus {
       case I_32_I0_SM16825_5: delete (static_cast<B_32_I0_SM16825_5*>(busPtr)); break;
       #endif
     #endif
+      case I_HS_HD108_3: delete (static_cast<B_HS_HD108_3*>(busPtr)); break;
+      case I_SS_HD108_3: delete (static_cast<B_SS_HD108_3*>(busPtr)); break;
       case I_HS_DOT_3: delete (static_cast<B_HS_DOT_3*>(busPtr)); break;
       case I_SS_DOT_3: delete (static_cast<B_SS_DOT_3*>(busPtr)); break;
       case I_HS_LPD_3: delete (static_cast<B_HS_LPD_3*>(busPtr)); break;
@@ -1327,6 +1356,7 @@ class PolyBus {
       uint8_t t = I_NONE;
       switch (busType) {
         case TYPE_APA102:  t = I_SS_DOT_3; break;
+        case TYPE_HD108:  t = I_SS_HD108_3; break;
         case TYPE_LPD8806: t = I_SS_LPD_3; break;
         case TYPE_LPD6803: t = I_SS_LPO_3; break;
         case TYPE_WS2801:  t = I_SS_WS1_3; break;

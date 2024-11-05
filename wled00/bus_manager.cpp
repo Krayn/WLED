@@ -404,6 +404,7 @@ std::vector<LEDType> BusDigital::getLEDTypes() {
     //{TYPE_WS2812_WWA,    "D",  PSTR("WS2811 WWA")}, // not implemented
     {TYPE_WS2801,        "2P", PSTR("WS2801")},
     {TYPE_APA102,        "2P", PSTR("APA102")},
+    {TYPE_HD108,        "2P", PSTR("HD108")},
     {TYPE_LPD8806,       "2P", PSTR("LPD8806")},
     {TYPE_LPD6803,       "2P", PSTR("LPD6803")},
     {TYPE_P9813,         "2P", PSTR("PP9813")},
